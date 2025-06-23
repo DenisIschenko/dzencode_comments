@@ -47,6 +47,7 @@ INSTALLED_APPS = [
 INSTALLED_APPS += [
     'rest_framework',
     'drf_spectacular',
+    'captcha',
 ]
 
 # Custom apps

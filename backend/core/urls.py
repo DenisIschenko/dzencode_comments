@@ -23,6 +23,8 @@ urlpatterns = [
 
     path('api/', include('comments.urls')),
 
+    path('captcha/', include('captcha.urls')),
+
     # swagger
     path('schema/', include([
         path("", SpectacularAPIView.as_view(), name='schema'),
