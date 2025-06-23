@@ -8,7 +8,8 @@ from .utils import clean_html
 class AttachmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Attachment
-        fields = ['file', 'content_type']
+        fields = ['comment', 'file', 'content_type', 'created_at']
+        read_only_fields = ['content_type', 'created_at']
 
 
 class CommentSerializer(serializers.ModelSerializer):

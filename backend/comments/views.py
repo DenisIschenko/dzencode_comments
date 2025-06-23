@@ -1,13 +1,15 @@
 from captcha.helpers import captcha_image_url
 from captcha.models import CaptchaStore
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import viewsets
+from rest_framework import status
 from rest_framework.filters import OrderingFilter
+from rest_framework.generics import DestroyAPIView, CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet
 
-from .models import Comment
-from .serializers import CommentSerializer
+from .models import Comment, Attachment
+from .serializers import CommentSerializer, AttachmentSerializer
 
 
 class CaptchaView(APIView):
@@ -20,8 +22,31 @@ class CaptchaView(APIView):
         })
 
 
-class CommentViewSet(viewsets.ModelViewSet):
+class CommentViewSet(ModelViewSet):
     queryset = Comment.objects.filter(parent__isnull=True).order_by('-created_at')
     serializer_class = CommentSerializer
     filter_backends = [OrderingFilter, DjangoFilterBackend]
     ordering_fields = ['user_name', 'email', 'created_at']
+
+
+class AttachmentCreateView(CreateAPIView):
+    queryset = Attachment.objects.all()
+    serializer_class = AttachmentSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+
+class AttachmentDeleteView(DestroyAPIView):
+    queryset = Attachment.objects.all()
+    serializer_class = AttachmentSerializer
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
