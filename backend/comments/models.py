@@ -1,6 +1,10 @@
+import sys
+from io import BytesIO
+
 import magic  # python-magic
 from PIL import Image
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import models
 from django.utils import timezone
 
@@ -39,6 +43,10 @@ class Attachment(models.Model):
     content_type = models.CharField(max_length=50)  # image/png, text/plain, etc.
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def save(self, *args, **kwargs):
+        self.full_clean(exclude=('content_type',))
+        return super(Attachment, self).save(*args, **kwargs)
+
     def clean(self):
         if self.file:
             self.validate_file()
@@ -46,7 +54,7 @@ class Attachment(models.Model):
     def validate_file(self):
         mime_type = magic.from_buffer(self.file.read(2048), mime=True)
         self.file.seek(0)
-        self.file_type = mime_type
+        self.content_type = mime_type
 
         # Check image
         if mime_type in ALLOWED_IMAGE_TYPES:
@@ -58,7 +66,7 @@ class Attachment(models.Model):
 
     def validate_image(self):
         try:
-            with Image.open(self.file.path) as img:
+            with Image.open(self.file.file) as img:
                 width, height = img.size
 
                 if width > MAX_IMAGE_SIZE[0] or height > MAX_IMAGE_SIZE[1]:
@@ -71,10 +79,15 @@ class Attachment(models.Model):
             raise ValidationError('Text file size must be less than 100KB')
 
     def resize_image(self):
+        output = BytesIO()
         try:
-            with Image.open(self.file.path) as img:
+            with Image.open(self.file.file) as img:
                 img.thumbnail(MAX_IMAGE_SIZE, Image.Resampling.LANCZOS)
-                img.save(self.file.path, quality=85, optimize=True)
+                img.save(output, format=self.content_type.split('/')[-1], quality=85, optimize=True)
+                output.seek(0)
+                self.file = InMemoryUploadedFile(output, 'FileField',
+                                                 self.file.name, self.content_type,
+                                                 sys.getsizeof(output), None)
         except Exception as e:
             raise ValidationError(f'Error resizing image: {str(e)}')
 

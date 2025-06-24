@@ -13,6 +13,7 @@ const CommentForm = ({parentId = null, onSuccess}) => {
     });
 
     const [captchaImage, setCaptchaImage] = useState(null);
+    const [csrftoken, setcsrftoken] = useState(null);
     const [errors, setErrors] = useState(null);
 
     const fetchCaptcha = async () => {
@@ -25,8 +26,26 @@ const CommentForm = ({parentId = null, onSuccess}) => {
         }
     };
 
+    const getCookie = async (name) => {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        setcsrftoken(cookieValue);
+    }
+
+
     useEffect(() => {
         fetchCaptcha();
+        getCookie('csrftoken');
     }, []);
 
     const handleChange = e => {
@@ -48,13 +67,19 @@ const CommentForm = ({parentId = null, onSuccess}) => {
             };
 
             const {file, ...rest} = commentPayload;
-            const res = await axios.post('/api/comments/', rest);
+            const res = await axios.post('/api/comments/', rest, {
+                headers: {
+                    'X-CSRFToken': csrftoken
+                }});
 
             if (file) {
                 const uploadForm = new FormData();
                 uploadForm.append('file', file);
                 uploadForm.append('comment', res.data.id);
-                await axios.post('/api/attachments/', uploadForm);
+                await axios.post('/api/attachments/', uploadForm, {
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    }});
             }
 
             onSuccess && onSuccess();
@@ -69,7 +94,38 @@ const CommentForm = ({parentId = null, onSuccess}) => {
             });
             fetchCaptcha();
         } catch (err) {
-            setErrors(err.response?.data);
+
+
+            function errorHandler(errData) {
+                console.log("errData: ");
+                console.log(errData);
+                let errorsString = []
+
+                if (Array.isArray(errData)) {
+                    for (const error of errData) {
+                        errorsString = errorsString.concat(errorHandler(error));
+                    }
+                } else if (typeof errData === 'object') {
+                    for (const key in errData) {
+                        if (errData[key] !== '__all__') {
+                            errorsString.push(errData[key]);
+                        }
+                    }
+                } else {
+                    if (errData !== '__all__') {
+                        errorsString.push(errData);
+                    }
+                }
+
+                console.log("Errors:", errorsString);
+                return errorsString;
+            }
+
+            if (err.response && err.response.data) {
+                setErrors(errorHandler(err.response.data));
+            } else {
+                setErrors(['An unknown error occurred.']);
+            }
             fetchCaptcha(); // refresh on error too
         }
     };
@@ -122,7 +178,13 @@ const CommentForm = ({parentId = null, onSuccess}) => {
                 </div>
             )}
 
-            {errors && <pre className="error">{JSON.stringify(errors, null, 2)}</pre>}
+            {errors && (
+                <div className="errors">
+                    {errors.map((error, index) => (
+                        <pre key={index} className="error">{error}</pre>
+                    ))}
+                </div>
+            )}
 
             <button type="submit">Submit</button>
         </form>
