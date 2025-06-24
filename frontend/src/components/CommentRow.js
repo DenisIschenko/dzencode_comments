@@ -2,7 +2,7 @@ import React, {useState} from 'react';
 import CommentForm from './CommentForm';
 import Modal from 'react-modal';
 
-const CommentRow = ({comment, onRefresh}) => {
+const CommentRow = ({comment, onSuccess}) => {
     const [showReplyForm, setShowReplyForm] = useState(false);
     const [modalIsOpen, setModalIsOpen] = useState(false);
     const [fileContent, setFileContent] = useState(null);
@@ -23,7 +23,6 @@ const CommentRow = ({comment, onRefresh}) => {
                         if (comment.attachments[0].content_type === 'text/plain') {
                             const res = await fetch(comment.attachments[0].file);
                             const text = await res.text();
-                            console.log(text);
                             setFileContent(text);
                         }
                         setModalIsOpen(true);
@@ -65,9 +64,9 @@ const CommentRow = ({comment, onRefresh}) => {
                     <div className={'inner-form'}>
                         <CommentForm
                             parentId={comment.id}
-                            onSuccess={() => {
+                            onSuccess={(data, parentId) => {
                                 setShowReplyForm(false);
-                                onRefresh();
+                                onSuccess(data, parentId);
                             }}
                         />
                     </div>
@@ -77,7 +76,7 @@ const CommentRow = ({comment, onRefresh}) => {
                         <CommentRow
                             key={reply.id}
                             comment={reply}
-                            onRefresh={onRefresh}
+                            onSuccess={onSuccess}
                         />
                     ))}
                 </div>

@@ -76,13 +76,14 @@ const CommentForm = ({parentId = null, onSuccess}) => {
                 const uploadForm = new FormData();
                 uploadForm.append('file', file);
                 uploadForm.append('comment', res.data.id);
-                await axios.post('/api/attachments/', uploadForm, {
+                const resf = await axios.post('/api/attachments/', uploadForm, {
                     headers: {
                         'X-CSRFToken': csrftoken
                     }});
+                res.data.attachments = [...res.data.attachments, resf.data];
             }
 
-            onSuccess && onSuccess();
+            onSuccess && onSuccess(res.data, res.data.parent);
             setFormData({
                 user_name: '',
                 email: '',
@@ -97,8 +98,6 @@ const CommentForm = ({parentId = null, onSuccess}) => {
 
 
             function errorHandler(errData) {
-                console.log("errData: ");
-                console.log(errData);
                 let errorsString = []
 
                 if (Array.isArray(errData)) {
@@ -116,8 +115,6 @@ const CommentForm = ({parentId = null, onSuccess}) => {
                         errorsString.push(errData);
                     }
                 }
-
-                console.log("Errors:", errorsString);
                 return errorsString;
             }
 
@@ -130,8 +127,8 @@ const CommentForm = ({parentId = null, onSuccess}) => {
         }
     };
 
-    const insertTag = (openTag, closeTag = '') => {
-        const textarea = document.querySelector('textarea[name="text"]');
+    const insertTag = (targetEl, openTag, closeTag = '') => {
+        const textarea = targetEl.closest('form').querySelector('textarea[name="text"]');
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
         const selected = textarea.value.slice(start, end);
@@ -145,10 +142,10 @@ const CommentForm = ({parentId = null, onSuccess}) => {
         }, 0);
     };
 
-    const handleInsertLink = () => {
+    const handleInsertLink = (e) => {
         const href = prompt("Enter URL:");
         if (href) {
-            insertTag(`<a href="${href}" title="">`, `</a>`);
+            insertTag(e.target, `<a href="${href}" title="">`, `</a>`);
         }
     };
 
@@ -163,9 +160,9 @@ const CommentForm = ({parentId = null, onSuccess}) => {
 
             <label>Allowed HTML tags for comment:
                 <div className="html-panel">
-                <button type="button" onClick={() => insertTag('<i>', '</i>')}>[i]</button>
-                <button type="button" onClick={() => insertTag('<strong>', '</strong>')}>[strong]</button>
-                <button type="button" onClick={() => insertTag('<code>', '</code>')}>[code]</button>
+                <button type="button" onClick={(e) => insertTag(e.target, '<i>', '</i>')}>[i]</button>
+                <button type="button" onClick={(e) => insertTag(e.target, '<strong>', '</strong>')}>[strong]</button>
+                <button type="button" onClick={(e) => insertTag(e.target, '<code>', '</code>')}>[code]</button>
                 <button type="button" onClick={handleInsertLink}>[a]</button>
             </div>
             </label>

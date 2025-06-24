@@ -46,8 +46,22 @@ const App = () => {
         }
     };
 
-    const handleSuccess = () => {
-        setRefresh(refresh + 1);
+    const handleSuccess = (data, parentId) => {
+        function checkReplies(comments) {
+            return comments.map((item) => {
+                if (item.id === parentId) {
+                    item.replies = item.replies ? [data, ...item.replies] : [data];
+                    return item
+                }
+                item.replies = checkReplies(item.replies, data, parentId);
+                return item; // Return unchanged items
+            });
+        }
+        setComments(comments => [data, ...comments]);
+        if (parentId) {
+            setComments(checkReplies(comments));
+        }
+        // setRefresh(refresh + 1);
     };
 
     const columns = [
@@ -95,7 +109,7 @@ const App = () => {
                     <CommentRow
                         key={comment.id}
                         comment={comment}
-                        onRefresh={() => setRefresh(refresh + 1)}
+                        onSuccess={handleSuccess}
                     />
                 ))}
             </div>
