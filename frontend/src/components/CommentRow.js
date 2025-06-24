@@ -32,44 +32,45 @@ const CommentRow = ({comment, onRefresh}) => {
                     </button>
                 ))}
 
-            <Modal
-                isOpen={modalIsOpen}
-              onRequestClose={() => {
-                setModalIsOpen(false);
-                setFileContent(null);
-              }}
-              contentLabel="Attachment Preview"
-              className="lightbox-modal"
-              overlayClassName="lightbox-overlay"
-            >
-              <button
-                onClick={() => {
-                  setModalIsOpen(false);
-                  setFileContent(null);
-                }}
-                aria-label="Close"
-                className="lightbox-close-btn"
-              >
-                &times;
-              </button>
-              {comment.attachments && (comment.attachments[0] && (comment.attachments[0].content_type === 'text/plain' ? (
-                <pre style={{whiteSpace: 'pre-wrap'}}>{fileContent}</pre>
-              ) : (
-                <img src={comment.attachments[0].file} alt="attachment" style={{maxWidth: '100%'}} />
-              )))}
-            </Modal>
+                <Modal isOpen={modalIsOpen}
+                       onRequestClose={() => {
+                           setModalIsOpen(false);
+                           setFileContent(null);
+                       }}
+                       contentLabel="Attachment Preview"
+                       className="lightbox-modal"
+                       overlayClassName="lightbox-overlay"
+                >
+                    <button onClick={() => {
+                        setModalIsOpen(false);
+                        setFileContent(null);
+                    }}
+                            aria-label="Close"
+                            className="lightbox-close-btn"
+                    >
+                        &times;
+                    </button>
+
+                    {comment.attachments && (comment.attachments[0] && (comment.attachments[0].content_type === 'text/plain' ? (
+                        <pre style={{whiteSpace: 'pre-wrap'}}>{fileContent}</pre>
+                    ) : (
+                        <img src={comment.attachments[0].file} alt="attachment" style={{maxWidth: '100%'}}/>
+                    )))}
+                </Modal>
 
                 <button onClick={() => setShowReplyForm(!showReplyForm)}>
                     {showReplyForm ? 'Cancel' : 'Reply'}
                 </button>
                 {showReplyForm && (
-                    <CommentForm
-                        parentId={comment.id}
-                        onSuccess={() => {
-                            setShowReplyForm(false);
-                            onRefresh();
-                        }}
-                    />
+                    <div className={'inner-form'}>
+                        <CommentForm
+                            parentId={comment.id}
+                            onSuccess={() => {
+                                setShowReplyForm(false);
+                                onRefresh();
+                            }}
+                        />
+                    </div>
                 )}
                 <div className="comment-replies">
                     {comment.replies?.map(reply => (

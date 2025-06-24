@@ -160,22 +160,27 @@ const CommentForm = ({parentId = null, onSuccess}) => {
                    onChange={handleChange}/>
             <input type="url" name="home_page" placeholder="Homepage (optional)" value={formData.home_page}
                    onChange={handleChange}/>
-            <div className="html-panel">
+
+            <label>Allowed HTML tags for comment:
+                <div className="html-panel">
                 <button type="button" onClick={() => insertTag('<i>', '</i>')}>[i]</button>
                 <button type="button" onClick={() => insertTag('<strong>', '</strong>')}>[strong]</button>
                 <button type="button" onClick={() => insertTag('<code>', '</code>')}>[code]</button>
                 <button type="button" onClick={handleInsertLink}>[a]</button>
             </div>
-            <textarea name="text" placeholder="Your comment" required value={formData.text} onChange={handleChange}/>
+            </label>
+            <textarea name="text" placeholder="Your comment" required value={formData.text} onChange={handleChange} rows='10'/>
 
             <label>Attachment: <input type="file" name="file" onChange={handleChange}/></label>
 
             {captchaImage && (
+                <label>Solve CAPTCHA:
                 <div className="captcha-section">
                     <img src={captchaImage} alt="captcha"/>
                     <input type="text" name="captcha_value" placeholder="Enter CAPTCHA" required
                            value={formData.captcha_value} onChange={handleChange}/>
                 </div>
+                </label>
             )}
 
             {errors && (

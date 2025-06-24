@@ -17,7 +17,7 @@ const App = () => {
         setLoading(true);
         try {
             const res = await axios.get('/api/comments/', {
-                params: {ordering, page}
+                params: {ordering, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE}
             });
             setComments(res.data.results);
             setCount(res.data.count);
@@ -101,9 +101,9 @@ const App = () => {
             </div>
 
             <div className="pagination">
-                <button onClick={() => handlePageChange(page - 1)}>Prev</button>
+                <button onClick={() => handlePageChange(page - 1)} disabled={ page === 1 ? 'disabled' : ""}>Prev</button>
                 <span>Page {page} of {Math.ceil(count / PAGE_SIZE)}</span>
-                <button onClick={() => handlePageChange(page + 1)}>Next</button>
+                <button onClick={() => handlePageChange(page + 1)} disabled={Math.ceil(count / PAGE_SIZE) === page ? 'disabled' : ""}>Next</button>
             </div>
         </div>
     );
