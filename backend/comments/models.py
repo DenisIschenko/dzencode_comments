@@ -7,6 +7,10 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import models
 from django.utils import timezone
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 MAX_IMAGE_SIZE = (320, 240)
 MAX_TEXT_SIZE = 100 * 1024  # 100KB
@@ -101,3 +105,14 @@ class Attachment(models.Model):
             return f"{self.file.size / 1024:.1f} KB"
         else:
             return f"{self.file.size / (1024 * 1024):.1f} MB"
+
+
+@receiver(post_save, sender=Comment)
+def comment_created(sender, instance, created, **kwargs):
+    if created:
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)('comments', {
+                'type': 'comment.created',
+                'id': instance.id,
+            }
+        )

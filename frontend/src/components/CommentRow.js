@@ -39,6 +39,7 @@ const CommentRow = ({comment, onSuccess}) => {
                        contentLabel="Attachment Preview"
                        className="lightbox-modal"
                        overlayClassName="lightbox-overlay"
+                       ariaHideApp={false}
                 >
                     <button onClick={() => {
                         setModalIsOpen(false);

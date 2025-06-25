@@ -46,7 +46,8 @@ INSTALLED_APPS += [
     'rest_framework',
     'drf_spectacular',
     'captcha',
-    "corsheaders"
+    'corsheaders',
+    'channels'
 ]
 
 # Custom apps
@@ -84,7 +85,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'core.wsgi.application'
+# WSGI_APPLICATION = 'core.wsgi.application'
+ASGI_APPLICATION = 'core.asgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
@@ -158,3 +160,9 @@ SPECTACULAR_SETTINGS = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
 ]
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
+}

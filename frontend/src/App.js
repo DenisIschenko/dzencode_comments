@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import axios from 'axios';
 import CommentForm from './components/CommentForm';
 import CommentRow from './components/CommentRow';
@@ -8,10 +8,58 @@ const App = () => {
     const [ordering, setOrdering] = useState('-created_at');
     const [page, setPage] = useState(1);
     const [count, setCount] = useState(0);
-    const [refresh, setRefresh] = useState(0); // force refresh after submit
+    // const [refresh, setRefresh] = useState(0); // force refresh after submit
     const [loading, setLoading] = useState(false);
 
     const PAGE_SIZE = 25
+    const commentsRef = useRef(comments);
+
+    useEffect(() => {
+        commentsRef.current = comments;
+    }, [comments]);
+
+    const wsRef = useRef(null);
+
+    const fetchCommentById = async (comment_id) => {
+        try {
+            const res = await axios.get(`/api/comments/${comment_id}/`);
+            console.log("fetchCommentById", res.data);
+            console.log("in fetchCommentById comments", commentsRef.current);
+            handleSuccess(res.data, res.data.parent);
+        } catch (err) {
+            console.error("Error fetching data:", err);
+        }
+    };
+
+    useEffect(() => {
+        const ws = new WebSocket('ws://localhost:8000/ws/comments/');
+        wsRef.current = ws;
+        ws.onopen = () => {
+            console.log('WebSocket connected');
+        };
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'comment.created') {
+                // Option 1: Refetch comments (recommended for paginated/sorted lists)
+                // it will be better when have a lot of messages from different users
+                // and maybe neet to disable this function from UI in future
+                //setRefresh(r => r + 1);
+
+                // Option 2: Optimistically add to the list (if on first page and LIFO)
+                // setComments(comments => [data, ...comments]);
+                fetchCommentById(data.id);
+            }
+        };
+        ws.onclose = () => {
+            console.log('WebSocket disconnected');
+        };
+        ws.onerror = (err) => {
+            console.error('WebSocket error:', err);
+        };
+        return () => {
+            ws.close();
+        };
+    }, []);
 
     const fetchComments = async () => {
         setLoading(true);
@@ -30,14 +78,12 @@ const App = () => {
 
     useEffect(() => {
         fetchComments()
-    }, [ordering, page, refresh]);
+    }, [ordering, page]);
 
     const handleSort = field => {
-
         setOrdering(prev =>
             prev === field ? `-${field}` : field
         );
-        
     };
 
     const handlePageChange = newPage => {
@@ -50,25 +96,34 @@ const App = () => {
         function checkReplies(comments) {
             return comments.map((item) => {
                 if (item.id === parentId) {
-                    item.replies = item.replies ? [data, ...item.replies] : [data];
+                    const isPresent = item.replies.some(obj => obj.id === data.id);
+                    if (!isPresent) {
+                        item.replies = item.replies ? [data, ...item.replies] : [data];
+                    }
                     return item
                 }
-                item.replies = checkReplies(item.replies, data, parentId);
+                item.replies = checkReplies(item.replies);
                 return item; // Return unchanged items
             });
         }
-        setComments(comments => [data, ...comments]);
+
         if (parentId) {
-            setComments(checkReplies(comments));
+            setComments(checkReplies(commentsRef.current));
+        } else {
+            const isPresent = commentsRef.current.some(obj => obj.id === data.id);
+            if (!isPresent) {
+                const newComments = [data, ...commentsRef.current];
+                setComments(newComments);
+            }
         }
         // setRefresh(refresh + 1);
     };
 
     const columns = [
-        { label: 'User', field: 'user_name', sortable: true },
-        { label: 'Email', field: 'email', sortable: true },
-        { label: 'Text', field: null, sortable: false },
-        { label: 'Date', field: 'created_at', sortable: true },
+        {label: 'User', field: 'user_name', sortable: true},
+        {label: 'Email', field: 'email', sortable: true},
+        {label: 'Text', field: null, sortable: false},
+        {label: 'Date', field: 'created_at', sortable: true},
     ];
 
     return (
@@ -115,9 +170,11 @@ const App = () => {
             </div>
 
             <div className="pagination">
-                <button onClick={() => handlePageChange(page - 1)} disabled={ page === 1 ? 'disabled' : ""}>Prev</button>
+                <button onClick={() => handlePageChange(page - 1)} disabled={page === 1 ? true : undefined}>Prev</button>
                 <span>Page {page} of {Math.ceil(count / PAGE_SIZE)}</span>
-                <button onClick={() => handlePageChange(page + 1)} disabled={Math.ceil(count / PAGE_SIZE) === page ? 'disabled' : ""}>Next</button>
+                <button onClick={() => handlePageChange(page + 1)}
+                        disabled={Math.ceil(count / PAGE_SIZE) === page ? true : undefined}>Next
+                </button>
             </div>
         </div>
     );
