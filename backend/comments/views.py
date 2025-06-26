@@ -1,5 +1,6 @@
 from captcha.helpers import captcha_image_url
 from captcha.models import CaptchaStore
+from django.core.cache import cache
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework.filters import OrderingFilter
@@ -23,11 +24,44 @@ class CaptchaView(APIView):
 
 
 class CommentViewSet(ModelViewSet):
-    queryset = Comment.objects.filter(parent__isnull=True).order_by('-created_at')
-    all_queryset = Comment.objects.all()
+    queryset = (Comment.objects
+                .prefetch_related('attachments', 'replies')
+                .filter(parent__isnull=True)
+                .order_by('-created_at'))
+    all_queryset = Comment.objects.prefetch_related('attachments', 'replies').select_related('parent').all()
     serializer_class = CommentSerializer
     filter_backends = [OrderingFilter, DjangoFilterBackend]
     ordering_fields = ['user_name', 'email', 'created_at']
+
+    def list(self, request, *args, **kwargs):
+        # cache_key = f'comments:{request.query_params.urlencode()}'
+        # Using a more structured cache key to avoid issues with long query strings
+        # This allows for better cache management and avoids potential issues with long URLs.
+        cache_key = (f'comments:'
+                     f'ordering:{request.query_params.get("ordering")}:'
+                     f'limit:{request.query_params.get("limit")}:'
+                     f'offset:{request.query_params.get("offset")}')
+        cached_data = cache.get(cache_key)
+
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            if cached_data is not None:
+                return self.get_paginated_response(cached_data)
+
+            serializer = self.get_serializer(page, many=True)
+            cache.set(cache_key, serializer.data, timeout=60)
+
+            return self.get_paginated_response(serializer.data)
+
+        if cached_data is not None:
+            return Response(self.get_paginated_response(cached_data))
+
+        serializer = self.get_serializer(queryset, many=True)
+        cache.set(cache_key, serializer.data, timeout=60)
+
+        return Response(serializer.data)
 
     def get_object(self):
         """

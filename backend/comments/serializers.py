@@ -1,4 +1,5 @@
 from captcha.models import CaptchaStore
+from django.core.cache import cache
 from rest_framework import serializers
 
 from .models import Comment, Attachment
@@ -29,7 +30,16 @@ class CommentSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'created_at')
 
     def get_replies(self, obj):
-        return CommentSerializer(obj.replies.all(), many=True).data
+        cache_key = f'replies:{obj.id}'
+        cached_data = cache.get(cache_key)
+
+        if cached_data is not None:
+            return cached_data
+
+        comments = CommentSerializer(obj.replies.prefetch_related('attachments', 'replies').all(), many=True).data
+        cache.set(cache_key, comments, timeout=60)
+
+        return comments
 
     def validate_text(self, value):
         return clean_html(value)
