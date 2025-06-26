@@ -1,6 +1,8 @@
 # 1. React build stage
 FROM node:20-alpine as build-frontend
 
+COPY frontend/ ./frontend/
+
 WORKDIR /app/frontend
 
 COPY frontend/package*.json ./
@@ -32,7 +34,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ ./backend/
 
 # Copying the frontend build from the previous stage
-COPY --from=build-frontend /app/frontend/build/ ./backend/frontend/
+COPY --from=build-frontend /app/frontend/ ./backend/frontend/
 
 # Setting up the environment
 WORKDIR /app/backend
