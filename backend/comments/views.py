@@ -5,6 +5,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework.filters import OrderingFilter
 from rest_framework.generics import DestroyAPIView, CreateAPIView, get_object_or_404
+from rest_framework.permissions import IsAuthenticated, BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
@@ -23,6 +24,14 @@ class CaptchaView(APIView):
         })
 
 
+ALLOWED_METHODS = ['GET', 'POST', 'OPTIONS']
+
+
+class CommentsCustomPermission(BasePermission):
+    def has_permission(self, request, view):
+        return request.method in ALLOWED_METHODS
+
+
 class CommentViewSet(ModelViewSet):
     queryset = (Comment.objects
                 .prefetch_related('attachments', 'replies')
@@ -32,6 +41,7 @@ class CommentViewSet(ModelViewSet):
     serializer_class = CommentSerializer
     filter_backends = [OrderingFilter, DjangoFilterBackend]
     ordering_fields = ['user_name', 'email', 'created_at']
+    permission_classes = [IsAuthenticated | CommentsCustomPermission]
 
     def list(self, request, *args, **kwargs):
         # cache_key = f'comments:{request.query_params.urlencode()}'
@@ -116,3 +126,21 @@ class AttachmentDeleteView(DestroyAPIView):
 
     def delete(self, request, *args, **kwargs):
         return self.destroy(request, *args, **kwargs)
+
+
+class GetUserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        if not user:
+            return Response({"detail": "User not authenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        data = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name
+        }
+        return Response(data, status=status.HTTP_200_OK)

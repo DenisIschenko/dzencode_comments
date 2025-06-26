@@ -2,7 +2,7 @@ import React, {useState} from 'react';
 import CommentForm from './CommentForm';
 import Modal from 'react-modal';
 
-const CommentRow = ({comment, onSuccess}) => {
+const CommentRow = ({comment, onSuccess, user}) => {
     const [showReplyForm, setShowReplyForm] = useState(false);
     const [modalIsOpen, setModalIsOpen] = useState(false);
     const [fileContent, setFileContent] = useState(null);
@@ -69,6 +69,7 @@ const CommentRow = ({comment, onSuccess}) => {
                                 setShowReplyForm(false);
                                 onSuccess(data, parentId);
                             }}
+                            user={user}
                         />
                     </div>
                 )}
@@ -78,6 +79,7 @@ const CommentRow = ({comment, onSuccess}) => {
                             key={reply.id}
                             comment={reply}
                             onSuccess={onSuccess}
+                            user={user}
                         />
                     ))}
                 </div>

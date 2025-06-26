@@ -44,6 +44,7 @@ INSTALLED_APPS = [
 # Third-party apps
 INSTALLED_APPS += [
     'rest_framework',
+    'rest_framework_simplejwt',
     'drf_spectacular',
     'captcha',
     'corsheaders',
@@ -135,6 +136,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = '../staticfiles/'
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = '../mediafiles/'
@@ -148,6 +150,9 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     'PAGE_SIZE': 25,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
 }
 
 SPECTACULAR_SETTINGS = {

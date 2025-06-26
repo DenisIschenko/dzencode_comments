@@ -1,7 +1,8 @@
 import React, {useEffect, useRef, useState} from 'react';
-import axios from 'axios';
+import api from './api/axios';
 import CommentForm from './components/CommentForm';
 import CommentRow from './components/CommentRow';
+import LoginModal from './components/LoginModal';
 
 const App = () => {
     const [comments, setComments] = useState([]);
@@ -11,8 +12,38 @@ const App = () => {
     // const [refresh, setRefresh] = useState(0); // force refresh after submit
     const [loading, setLoading] = useState(false);
 
+    const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('access'));
+
+    const [user, setUser] = useState(null);
+
+
     const PAGE_SIZE = 25
     const commentsRef = useRef(comments);
+
+    const handleLoginSuccess = () => {
+        setIsLoggedIn(true);
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem('access');
+        localStorage.removeItem('refresh');
+        setIsLoggedIn(false);
+    };
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const res = await api.get('/api/me/');
+                setUser(res.data);
+            } catch (err) {
+                setUser(null);
+            }
+        };
+        if (isLoggedIn) {
+            fetchUser();
+        }
+    }, [isLoggedIn]);
 
     useEffect(() => {
         commentsRef.current = comments;
@@ -22,9 +53,7 @@ const App = () => {
 
     const fetchCommentById = async (comment_id) => {
         try {
-            const res = await axios.get(`/api/comments/${comment_id}/`);
-            console.log("fetchCommentById", res.data);
-            console.log("in fetchCommentById comments", commentsRef.current);
+            const res = await api.get(`/api/comments/${comment_id}/`);
             handleSuccess(res.data, res.data.parent);
         } catch (err) {
             console.error("Error fetching data:", err);
@@ -64,7 +93,7 @@ const App = () => {
     const fetchComments = async () => {
         setLoading(true);
         try {
-            const res = await axios.get('/api/comments/', {
+            const res = await api.get('/api/comments/', {
                 params: {ordering, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE}
             });
             setComments(res.data.results);
@@ -129,13 +158,25 @@ const App = () => {
     return (
 
         <div className="app-container">
+            <div style={{position: 'absolute', top: 10, right: 10}}>
+                {isLoggedIn ? (
+                    <button onClick={handleLogout}>Logout</button>
+                ) : (
+                    <button onClick={() => setIsLoginModalOpen(true)}>Login</button>
+                )}
+            </div>
+            <LoginModal
+                isOpen={isLoginModalOpen}
+                onRequestClose={() => setIsLoginModalOpen(false)}
+                onLoginSuccess={handleLoginSuccess}
+            />
             {loading && (
                 <div className="loader_container">
                     <div className="loader"></div>
                 </div>
             )}
             <h2>Leave a comment</h2>
-            <CommentForm onSuccess={handleSuccess}/>
+            <CommentForm onSuccess={handleSuccess} user={user}/>
 
             <h3>Top-level comments</h3>
 
@@ -165,12 +206,14 @@ const App = () => {
                         key={comment.id}
                         comment={comment}
                         onSuccess={handleSuccess}
+                        user={user}
                     />
                 ))}
             </div>
 
             <div className="pagination">
-                <button onClick={() => handlePageChange(page - 1)} disabled={page === 1 ? true : undefined}>Prev</button>
+                <button onClick={() => handlePageChange(page - 1)} disabled={page === 1 ? true : undefined}>Prev
+                </button>
                 <span>Page {page} of {Math.ceil(count / PAGE_SIZE)}</span>
                 <button onClick={() => handlePageChange(page + 1)}
                         disabled={Math.ceil(count / PAGE_SIZE) === page ? true : undefined}>Next

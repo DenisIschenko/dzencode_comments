@@ -1,10 +1,13 @@
 import React, {useEffect, useState} from 'react';
-import axios from 'axios';
+import api from '../api/axios';
 
-const CommentForm = ({parentId = null, onSuccess}) => {
+const CommentForm = ({parentId = null, onSuccess, user}) => {
+    const [userName, setUserName] = useState(user?.username || '');
+    const [email, setEmail] = useState(user?.email || '');
+
     const [formData, setFormData] = useState({
-        user_name: '',
-        email: '',
+        user_name: userName,
+        email: email,
         home_page: '',
         text: '',
         captcha_value: '',
@@ -16,9 +19,27 @@ const CommentForm = ({parentId = null, onSuccess}) => {
     const [csrftoken, setcsrftoken] = useState(null);
     const [errors, setErrors] = useState(null);
 
+
+    useEffect(() => {
+        if (user) {
+            setUserName(user.username || '');
+            setEmail(user.email || '');
+            setFormData({
+                user_name: userName,
+                email: email,
+                home_page: '',
+                text: '',
+                captcha_value: '',
+                captcha_key: '',
+                file: null
+            });
+        }
+
+    }, [user]);
+
     const fetchCaptcha = async () => {
         try {
-            const res = await axios.get('/api/captcha/');
+            const res = await api.get('/api/captcha/');
             setFormData(prev => ({...prev, captcha_key: res.data.captcha_key, captcha_value: ''}));
             setCaptchaImage(res.data.image_url);
         } catch (err) {
@@ -67,26 +88,28 @@ const CommentForm = ({parentId = null, onSuccess}) => {
             };
 
             const {file, ...rest} = commentPayload;
-            const res = await axios.post('/api/comments/', rest, {
+            const res = await api.post('/api/comments/', rest, {
                 headers: {
                     'X-CSRFToken': csrftoken
-                }});
+                }
+            });
 
             if (file) {
                 const uploadForm = new FormData();
                 uploadForm.append('file', file);
                 uploadForm.append('comment', res.data.id);
-                const resf = await axios.post('/api/attachments/', uploadForm, {
+                const resf = await api.post('/api/attachments/', uploadForm, {
                     headers: {
                         'X-CSRFToken': csrftoken
-                    }});
+                    }
+                });
                 res.data.attachments = [...res.data.attachments, resf.data];
             }
 
             onSuccess && onSuccess(res.data, res.data.parent);
             setFormData({
-                user_name: '',
-                email: '',
+                user_name: userName,
+                email: email,
                 home_page: '',
                 text: '',
                 captcha_value: '',
@@ -160,23 +183,25 @@ const CommentForm = ({parentId = null, onSuccess}) => {
 
             <label>Allowed HTML tags for comment:
                 <div className="html-panel">
-                <button type="button" onClick={(e) => insertTag(e.target, '<i>', '</i>')}>[i]</button>
-                <button type="button" onClick={(e) => insertTag(e.target, '<strong>', '</strong>')}>[strong]</button>
-                <button type="button" onClick={(e) => insertTag(e.target, '<code>', '</code>')}>[code]</button>
-                <button type="button" onClick={handleInsertLink}>[a]</button>
-            </div>
+                    <button type="button" onClick={(e) => insertTag(e.target, '<i>', '</i>')}>[i]</button>
+                    <button type="button" onClick={(e) => insertTag(e.target, '<strong>', '</strong>')}>[strong]
+                    </button>
+                    <button type="button" onClick={(e) => insertTag(e.target, '<code>', '</code>')}>[code]</button>
+                    <button type="button" onClick={handleInsertLink}>[a]</button>
+                </div>
             </label>
-            <textarea name="text" placeholder="Your comment" required value={formData.text} onChange={handleChange} rows='10'/>
+            <textarea name="text" placeholder="Your comment" required value={formData.text} onChange={handleChange}
+                      rows='10'/>
 
             <label>Attachment: <input type="file" name="file" onChange={handleChange}/></label>
 
             {captchaImage && (
                 <label>Solve CAPTCHA:
-                <div className="captcha-section">
-                    <img src={captchaImage} alt="captcha"/>
-                    <input type="text" name="captcha_value" placeholder="Enter CAPTCHA" required
-                           value={formData.captcha_value} onChange={handleChange}/>
-                </div>
+                    <div className="captcha-section">
+                        <img src={captchaImage} alt="captcha"/>
+                        <input type="text" name="captcha_value" placeholder="Enter CAPTCHA" required
+                               value={formData.captcha_value} onChange={handleChange}/>
+                    </div>
                 </label>
             )}
 
