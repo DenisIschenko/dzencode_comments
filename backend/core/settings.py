@@ -28,7 +28,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", 'django-insecure-=adgc6p2qbzki*ii%dodz%#8&r
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(util.strtobool(os.getenv("DEBUG", "True")))
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 
 # Application definition
 
@@ -72,7 +72,7 @@ ROOT_URLCONF = 'core.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates']
+        'DIRS': [BASE_DIR / 'templates', BASE_DIR / 'frontend/build']
         ,
         'APP_DIRS': True,
         'OPTIONS': {
@@ -136,15 +136,18 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
-STATIC_ROOT = '../staticfiles/'
+STATIC_ROOT = os.getenv("STATIC_ROOT", '../staticfiles/')
 
 MEDIA_URL = 'media/'
-MEDIA_ROOT = '../mediafiles/'
+MEDIA_ROOT = os.getenv("MEDIA_ROOT", '../mediafiles/')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+STATICFILES_DIRS = [
+    BASE_DIR / 'frontend/build/static'
+]
 
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
@@ -162,9 +165,7 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
 }
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-]
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
 
 CHANNEL_LAYERS = {
     "default": {
