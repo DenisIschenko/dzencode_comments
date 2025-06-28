@@ -61,7 +61,7 @@ const App = () => {
     };
 
     useEffect(() => {
-        const ws = new WebSocket('ws://localhost:8000/ws/comments/');
+        const ws = new WebSocket(process.env.REACT_APP_WS_URL);
         wsRef.current = ws;
         ws.onopen = () => {
             console.log('WebSocket connected');
